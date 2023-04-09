@@ -53,7 +53,7 @@ export async function getServerSideProps({
     where: {
       private: false,
       views: {
-        gte: 5,
+        gte: 100,
       },
     },
   });

@@ -1,5 +1,11 @@
 let isRequesting = false;
 
+const API_URL = "https://sharegpt.com/api/conversations";
+const PAGE_URL = "https://sharegpt.com/c/";
+
+// const API_URL = "http://localhost:3000/api/conversations";
+// const PAGE_URL = "http://localhost:3000/c/";
+
 function init() {
   const shareButton = createBtn();
 
@@ -13,33 +19,18 @@ function init() {
 
   appendShareButton();
 
-  // re-append the share buttin whenever "#__next main" gets replaced
-  const observer = new MutationObserver(function (mutations_list) {
-    mutations_list.forEach(function (mutation) {
-      if (mutation.addedNodes.length > 0) {
-        appendShareButton();
-      }
-    });
-  });
-
-  observer.observe(document.querySelector("#__next"), {
-    subtree: false,
-    childList: true,
-  });
+  const id = setInterval(() => {
+    if (
+      !document.querySelector("#share-button") ||
+      document.querySelector("#share-button").style.display === "none"
+    ) {
+      appendShareButton();
+    }
+  }, 500);
 
   const textareaElement = document.querySelector("#__next main form textarea");
 
   const submitButton = textareaElement.nextElementSibling;
-
-  document.body.addEventListener("keydown", (event) => {
-    if (event.keyCode === 13) {
-      showIfNotLoading(submitButton, shareButton);
-    }
-  });
-
-  submitButton.addEventListener("click", (event) => {
-    showIfNotLoading(submitButton, shareButton);
-  });
 
   shareButton.addEventListener("click", async () => {
     if (isRequesting) return;
@@ -57,13 +48,14 @@ function init() {
     const chatGptPlusElement = document.querySelector(".gold-new-button");
     const isNotChatGptPlus =
       chatGptPlusElement && chatGptPlusElement.innerText.includes("Upgrade");
-    
+
     if (!isNotChatGptPlus) {
       const modelElement = threadContainer.firstChild;
       model = modelElement.innerText;
     }
 
     const conversationData = {
+      title: document.title,
       avatarUrl: getAvatarImage(),
       model,
       items: [],
@@ -81,9 +73,10 @@ function init() {
             value: warning.innerText.split("\n")[0],
           });
         } else {
+          const text = node.querySelector(".whitespace-pre-wrap");
           conversationData.items.push({
             from: "human",
-            value: node.textContent,
+            value: text.textContent,
           });
         }
         // if it's a GPT response, it might contain code blocks
@@ -95,7 +88,7 @@ function init() {
       }
     }
 
-    const res = await fetch("https://sharegpt.com/api/conversations", {
+    const res = await fetch(API_URL, {
       body: JSON.stringify(conversationData),
       headers: { "Content-Type": "application/json" },
       method: "POST",
@@ -104,7 +97,7 @@ function init() {
       alert(`Error saving conversation: ${err.message}`);
     });
     const { id } = await res.json();
-    const url = `https://sharegpt.com/c/${id}`;
+    const url = PAGE_URL + id;
 
     window.open(url, "_blank");
 
@@ -157,6 +150,8 @@ function getAvatarImage() {
 
 function createBtn() {
   const button = document.createElement("button");
+
+  button.id = "share-button";
 
   button.classList.add("btn", "flex", "gap-2", "justify-center", "btn-neutral");
 
